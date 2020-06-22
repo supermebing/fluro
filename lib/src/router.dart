@@ -2,7 +2,7 @@
  * fluro
  * Created by Yakka
  * https://theyakka.com
- * 
+ *
  * Copyright (c) 2019 Yakka, LLC. All rights reserved.
  * See LICENSE for distribution and usage details.
  */
@@ -16,7 +16,12 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class Router {
+  Router({this.navigatorKey});
+
   static final appRouter = Router();
+
+  // The GlobalKey which controlls routing from outside (not using Navigator directory).
+  final GlobalKey<NavigatorState> navigatorKey;
 
   /// The tree structure that stores the defined routes
   final RouteTree _routeTree = RouteTree();
@@ -38,7 +43,13 @@ class Router {
     return _routeTree.matchRoute(path);
   }
 
-  void pop(BuildContext context) => Navigator.pop(context);
+  bool canPop(BuildContext context) => navigatorKey == null
+      ? Navigator.canPop(context)
+      : navigatorKey.currentState.canPop();
+
+  void pop(BuildContext context) => navigatorKey == null
+      ? Navigator.pop(context)
+      : navigatorKey.currentState.pop();
 
   ///
   Future navigateTo(BuildContext context, String path,
@@ -62,12 +73,18 @@ class Router {
       }
       if (route != null) {
         if (clearStack) {
-          future =
-              Navigator.pushAndRemoveUntil(context, route, (check) => false);
+          future = navigatorKey == null
+              ? Navigator.pushAndRemoveUntil(context, route, (check) => false)
+              : navigatorKey.currentState
+                  .pushAndRemoveUntil(route, (check) => false);
         } else {
           future = replace
-              ? Navigator.pushReplacement(context, route)
-              : Navigator.push(context, route);
+              ? navigatorKey == null
+                  ? Navigator.pushReplacement(context, route)
+                  : navigatorKey.currentState.pushReplacement(route)
+              : navigatorKey == null
+                  ? Navigator.push(context, route)
+                  : navigatorKey.currentState.push(route);
         }
         completer.complete();
       } else {
